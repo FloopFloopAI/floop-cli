@@ -18,6 +18,11 @@ import {
   secretsSetCommand,
   secretsRmCommand,
 } from "./commands/secrets.js";
+import { conversationsCommand } from "./commands/conversations.js";
+import {
+  subdomainCheckCommand,
+  subdomainSuggestCommand,
+} from "./commands/subdomain.js";
 import { cleanupStaleOld } from "./upgrade/swap.js";
 
 // Best-effort cleanup of the stale `.old` binary left over by the last
@@ -205,6 +210,40 @@ secrets
   .option("--json", "Emit machine-readable JSON")
   .action(async (ref: string, key: string, opts) => {
     await secretsRmCommand(ref, key, { json: !!opts.json });
+  });
+
+// ─── Conversations ──────────────────────────────────────────────────────
+
+program
+  .command("conversations <project>")
+  .alias("history")
+  .description("Show a project's chat history (id or subdomain)")
+  .option("--limit <n>", "Show only the last N messages")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, opts) => {
+    await conversationsCommand(ref, { limit: opts.limit, json: !!opts.json });
+  });
+
+// ─── Subdomain utilities ────────────────────────────────────────────────
+
+const subdomain = program
+  .command("subdomain")
+  .description("Check or suggest project subdomains (scripting helpers for `floop new`)");
+
+subdomain
+  .command("check <slug>")
+  .description("Check whether a subdomain is available; exit 0 if free, 1 if taken")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (slug: string, opts) => {
+    await subdomainCheckCommand(slug, { json: !!opts.json });
+  });
+
+subdomain
+  .command("suggest <prompt>")
+  .description("Print an available subdomain derived from a prompt")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (prompt: string, opts) => {
+    await subdomainSuggestCommand(prompt, { json: !!opts.json });
   });
 
 program.parseAsync(process.argv).catch((err) => {

@@ -161,3 +161,13 @@ export function deleteProjectSecret(
     `/api/v1/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(key)}`,
   );
 }
+
+// ─── Conversations ─────────────────────────────────────────────────────────
+// Re-exports the same shape `floop chat` uses so the conversations command
+// can share the renderer.
+
+export {
+  type ConversationMessage,
+  type ConversationsResponse,
+  getConversations,
+} from "./chat.js";
