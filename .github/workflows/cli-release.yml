@@ -1,0 +1,124 @@
+name: CLI Release
+
+# Triggered by pushing a tag like `cli-v0.1.0`. Builds standalone binaries
+# for Linux x64, macOS x64+arm64, and Windows x64 using Bun's --compile, then
+# attaches them to a GitHub Release alongside SHA256SUMS for `floop upgrade`
+# checksum verification.
+#
+# Bun cross-compiles from any host, so we run the whole matrix on a single
+# Linux runner — faster than spinning up macOS + Windows VMs we don't need.
+
+on:
+  push:
+    tags:
+      - "cli-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. cli-v0.1.0). When run via workflow_dispatch, no GitHub Release is created — artifacts are uploaded for manual download only."
+        required: true
+
+jobs:
+  compile:
+    name: Compile binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # for creating the GitHub Release
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install CLI deps
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Compile (linux-x64)
+        run: npm run compile:linux-x64
+
+      - name: Compile (darwin-x64)
+        run: npm run compile:darwin-x64
+
+      - name: Compile (darwin-arm64)
+        run: npm run compile:darwin-arm64
+
+      - name: Compile (windows-x64)
+        run: npm run compile:windows-x64
+
+      - name: Generate SHA256SUMS
+        working-directory: dist
+        run: |
+          sha256sum floop-linux-x64 floop-darwin-x64 floop-darwin-arm64 floop-windows-x64.exe > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: List build artifacts
+        working-directory: dist
+        run: ls -lh floop-* SHA256SUMS
+
+      - name: Upload artifacts (workflow_dispatch only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: floop-cli-binaries
+          path: |
+            dist/floop-linux-x64
+            dist/floop-darwin-x64
+            dist/floop-darwin-arm64
+            dist/floop-windows-x64.exe
+            dist/SHA256SUMS
+          retention-days: 14
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/cli-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          # Pre-release tags include `-alpha`/`-beta`/`-rc` segments after the version.
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist/floop-linux-x64
+            dist/floop-darwin-x64
+            dist/floop-darwin-arm64
+            dist/floop-windows-x64.exe
+            dist/SHA256SUMS
+          body: |
+            ## Install
+
+            **macOS (Apple Silicon)**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/floop-darwin-arm64 -o /usr/local/bin/floop
+            chmod +x /usr/local/bin/floop
+            ```
+
+            **macOS (Intel)**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/floop-darwin-x64 -o /usr/local/bin/floop
+            chmod +x /usr/local/bin/floop
+            ```
+
+            **Linux x64**
+            ```bash
+            curl -L https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/floop-linux-x64 -o /usr/local/bin/floop
+            chmod +x /usr/local/bin/floop
+            ```
+
+            **Windows x64**
+
+            Download `floop-windows-x64.exe`, rename to `floop.exe`, place on `%PATH%`.
+
+            > **First-launch warnings:** these binaries are **not yet code-signed**. macOS will block them with a Gatekeeper prompt — right-click → Open the first time, or run `xattr -d com.apple.quarantine /usr/local/bin/floop`. Windows will show a SmartScreen "Unknown publisher" warning — click "More info" → "Run anyway". Code signing is on the roadmap.
+
+            ## Verify
+
+            ```bash
+            sha256sum -c SHA256SUMS
+            ```
+
+            Then run `floop login` and you're off.
