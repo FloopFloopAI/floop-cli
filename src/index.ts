@@ -32,12 +32,27 @@ import {
   libraryListCommand,
   libraryCloneCommand,
 } from "./commands/library.js";
+import { completionCommand } from "./commands/completion.js";
+import {
+  configGetCommand,
+  configSetCommand,
+} from "./commands/config.js";
+import { Telemetry, maybePromptForTelemetry } from "./telemetry.js";
 import { cleanupStaleOld } from "./upgrade/swap.js";
 
 // Best-effort cleanup of the stale `.old` binary left over by the last
 // in-place upgrade. Fire-and-forget — we don't await it; if it fails the
 // next launch tries again.
 cleanupStaleOld().catch(() => {});
+
+// Telemetry: started here so the duration measurement covers parseAsync.
+// Only fires on the parseAsync clean-exit path (IIFE below). Commands that
+// exit early via handleCommandError bypass this — acceptable for v1; we'll
+// undercount errors but that's a small price for keeping the exit path
+// simple. To capture errors exhaustively we'd refactor handleCommandError
+// to throw a typed error instead of process.exit.
+const __floopRawCommand = process.argv[2] ?? "";
+const __floopTelemetry = new Telemetry(__floopRawCommand);
 
 const program = new Command();
 
@@ -324,7 +339,66 @@ library
     });
   });
 
-program.parseAsync(process.argv).catch((err) => {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
+// ─── Shell completions ──────────────────────────────────────────────────
+
+program
+  .command("completion <shell>")
+  .description("Print shell completion script for bash | zsh | fish | powershell")
+  .action((shell: string) => {
+    completionCommand(shell);
+  });
+
+// ─── Local config ────────────────────────────────────────────────────────
+
+const config = program
+  .command("config")
+  .description("Show or set local CLI settings (apiUrl, telemetry)");
+
+config
+  .command("get [key]")
+  .description("Print the current config (or one key)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (key: string | undefined, opts) => {
+    await configGetCommand(key, { json: !!opts.json });
+  });
+
+config
+  .command("set <key> <value>")
+  .description("Set a config value. Settable: apiUrl, telemetry (true|false)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (key: string, value: string, opts) => {
+    await configSetCommand(key, value, { json: !!opts.json });
+  });
+
+// ─── Run ──────────────────────────────────────────────────────────────────
+
+(async () => {
+  // First-run prompt for telemetry — silent on non-TTY, --json, or skip-listed
+  // commands. Decision is persisted; subsequent invocations are silent.
+  const argv = process.argv.slice(2);
+  const isJson = argv.includes("--json");
+  await maybePromptForTelemetry(__floopRawCommand, isJson).catch(() => {});
+
+  let exitCode = 0;
+  try {
+    await program.parseAsync(process.argv);
+    // process.exitCode is `string | number | undefined` in newer Node types;
+    // coerce to a number for our local tracking.
+    const raw = process.exitCode;
+    exitCode = typeof raw === "number" ? raw : raw === undefined ? 0 : Number(raw) || 0;
+  } catch (err) {
+    // Commander throws CommanderError for --help / --version with exitCode 0;
+    // honor that, otherwise treat as a real failure.
+    const code = (err as { exitCode?: number }).exitCode;
+    if (typeof code === "number") {
+      exitCode = code;
+    } else {
+      console.error(err instanceof Error ? err.message : String(err));
+      exitCode = 1;
+    }
+  }
+
+  // Fire-and-forget telemetry (1-second timeout inside Telemetry.send).
+  await __floopTelemetry.send(exitCode).catch(() => {});
+  process.exit(exitCode);
+})();

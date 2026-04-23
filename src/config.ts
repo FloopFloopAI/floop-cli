@@ -26,6 +26,10 @@ export interface ConfigFile {
   token?: string;
   tokenPrefix?: string;
   user?: StoredUser;
+  /** Anonymous telemetry opt-in. `undefined` = not yet decided (prompt on next interactive run). */
+  telemetry?: boolean;
+  /** Random hex id sent with telemetry events. Generated on first opt-in. */
+  anonymousId?: string;
 }
 
 export function configDir(): string {
