@@ -7,6 +7,7 @@
  */
 
 import { FloopError, FloopErrorCode } from "./errors.js";
+import { CURRENT_VERSION } from "../version.js";
 
 interface ApiSuccess<T> {
   data: T;
@@ -47,7 +48,7 @@ export class ApiClient {
     body?: unknown,
   ): Promise<T> {
     const headers: Record<string, string> = {
-      "User-Agent": `floop-cli/${process.env.npm_package_version ?? "0.0.0"}`,
+      "User-Agent": `floop-cli/${CURRENT_VERSION}`,
     };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (this.token) headers["Authorization"] = `Bearer ${this.token}`;

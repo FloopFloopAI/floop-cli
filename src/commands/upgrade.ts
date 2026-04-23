@@ -20,8 +20,9 @@ import {
   sha256OfFile,
   swapInPlace,
 } from "../upgrade/swap.js";
+import { CURRENT_VERSION } from "../version.js";
 
-export const CURRENT_VERSION = "0.1.0-alpha.5";
+export { CURRENT_VERSION };
 
 export interface UpgradeOptions {
   check?: boolean;

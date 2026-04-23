@@ -16,6 +16,7 @@ import readline from "node:readline";
 import pc from "picocolors";
 
 import { readConfig, writeConfig, type ConfigFile } from "./config.js";
+import { CURRENT_VERSION } from "./version.js";
 
 const DEFAULT_API_URL = "https://www.floopfloop.com";
 const TIMEOUT_MS = 1000;
@@ -62,7 +63,7 @@ export class Telemetry {
       command: this.command,
       exitCode,
       durationMs: Date.now() - this.startedAt,
-      version: process.env.npm_package_version ?? "0.0.0",
+      version: CURRENT_VERSION,
       os: process.platform,
     };
 
