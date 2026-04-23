@@ -23,6 +23,15 @@ import {
   subdomainCheckCommand,
   subdomainSuggestCommand,
 } from "./commands/subdomain.js";
+import {
+  keysListCommand,
+  keysCreateCommand,
+  keysRmCommand,
+} from "./commands/keys.js";
+import {
+  libraryListCommand,
+  libraryCloneCommand,
+} from "./commands/library.js";
 import { cleanupStaleOld } from "./upgrade/swap.js";
 
 // Best-effort cleanup of the stale `.old` binary left over by the last
@@ -133,9 +142,9 @@ program
   });
 
 program
-  .command("chat <project>")
-  .description("Open an interactive REPL to refine a project (id or subdomain)")
-  .action(async (ref: string) => {
+  .command("chat [project]")
+  .description("Open an interactive REPL to refine a project (id or subdomain). With no arg, picks from your project list.")
+  .action(async (ref: string | undefined) => {
     await chatCommand(ref, {});
   });
 
@@ -244,6 +253,75 @@ subdomain
   .option("--json", "Emit machine-readable JSON")
   .action(async (prompt: string, opts) => {
     await subdomainSuggestCommand(prompt, { json: !!opts.json });
+  });
+
+// ─── Programmatic API keys (for CI scripts) ─────────────────────────────
+
+const keys = program
+  .command("keys")
+  .description("Manage programmatic API keys (`flp_…`) for CI/CD use — distinct from device tokens");
+
+keys
+  .command("list")
+  .alias("ls")
+  .description("List your API keys (metadata only)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (opts) => {
+    await keysListCommand({ json: !!opts.json });
+  });
+
+keys
+  .command("create <name>")
+  .description("Create a new API key. Raw key is shown ONCE — copy it immediately. (Business plan required.)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (name: string, opts) => {
+    await keysCreateCommand(name, { json: !!opts.json });
+  });
+
+keys
+  .command("rm <name-or-id>")
+  .alias("delete")
+  .description("Revoke an API key (by name or id). Refuses to revoke the key making the call.")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, opts) => {
+    await keysRmCommand(ref, { json: !!opts.json });
+  });
+
+// ─── Library (public projects) ──────────────────────────────────────────
+
+const library = program
+  .command("library")
+  .description("Browse and clone public projects from the FloopFloop library");
+
+library
+  .command("list")
+  .alias("ls")
+  .description("List public projects in the library")
+  .option("--bot-type <type>", "Filter by type (site, app, bot, api, internal, game)")
+  .option("--search <query>", "Filter by name/description text")
+  .option("--sort <order>", "newest (default) or popular")
+  .option("--limit <n>", "Limit results (1-50, default 20)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (opts) => {
+    await libraryListCommand({
+      botType: opts.botType,
+      search: opts.search,
+      sort: opts.sort,
+      limit: opts.limit,
+      json: !!opts.json,
+    });
+  });
+
+library
+  .command("clone <projectId>")
+  .description("Clone a public library project into your account")
+  .option("--subdomain <slug>", "Subdomain for the clone (defaults to a slug of the source name)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (projectId: string, opts) => {
+    await libraryCloneCommand(projectId, {
+      subdomain: opts.subdomain,
+      json: !!opts.json,
+    });
   });
 
 program.parseAsync(process.argv).catch((err) => {
