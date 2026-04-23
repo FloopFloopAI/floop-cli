@@ -12,6 +12,12 @@ import { openCommand } from "./commands/open.js";
 import { chatCommand } from "./commands/chat.js";
 import { upgradeCommand, CURRENT_VERSION } from "./commands/upgrade.js";
 import { docsCommand, feedbackCommand } from "./commands/help-shortcuts.js";
+import { usageCommand } from "./commands/usage.js";
+import {
+  secretsListCommand,
+  secretsSetCommand,
+  secretsRmCommand,
+} from "./commands/secrets.js";
 import { cleanupStaleOld } from "./upgrade/swap.js";
 
 // Best-effort cleanup of the stale `.old` binary left over by the last
@@ -151,6 +157,54 @@ program
   .option("--json", "Emit machine-readable JSON")
   .action(async (opts) => {
     await feedbackCommand({ json: !!opts.json });
+  });
+
+// ─── Account ─────────────────────────────────────────────────────────────
+
+program
+  .command("usage")
+  .description("Show your plan, credit balance, and current-period usage")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (opts) => {
+    await usageCommand({ json: !!opts.json });
+  });
+
+// ─── Project secrets ─────────────────────────────────────────────────────
+
+const secrets = program
+  .command("secrets")
+  .description("Manage write-only environment variables on a project");
+
+secrets
+  .command("list <project>")
+  .alias("ls")
+  .description("List secrets set on a project (values are never returned)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, opts) => {
+    await secretsListCommand(ref, { json: !!opts.json });
+  });
+
+secrets
+  .command("set <project> <key>")
+  .description("Create or replace a secret. Reads value from --value, --from-env, or stdin (in that order)")
+  .option("--value <value>", "Set the value inline (puts it in shell history; prefer stdin or --from-env)")
+  .option("--from-env <varname>", "Read the value from a local environment variable")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, key: string, opts) => {
+    await secretsSetCommand(ref, key, {
+      value: opts.value,
+      fromEnv: opts.fromEnv,
+      json: !!opts.json,
+    });
+  });
+
+secrets
+  .command("rm <project> <key>")
+  .alias("delete")
+  .description("Remove a secret by key (idempotent)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, key: string, opts) => {
+    await secretsRmCommand(ref, key, { json: !!opts.json });
   });
 
 program.parseAsync(process.argv).catch((err) => {

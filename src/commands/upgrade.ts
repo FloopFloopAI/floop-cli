@@ -21,7 +21,7 @@ import {
   swapInPlace,
 } from "../upgrade/swap.js";
 
-export const CURRENT_VERSION = "0.1.0-alpha.1";
+export const CURRENT_VERSION = "0.1.0-alpha.2";
 
 export interface UpgradeOptions {
   check?: boolean;

@@ -112,3 +112,52 @@ export function reactivateProject(
 ): Promise<unknown> {
   return client.request("POST", `/api/v1/projects/${encodeURIComponent(projectId)}/reactivate`);
 }
+
+// ─── Secrets ───────────────────────────────────────────────────────────────
+//
+// Project secrets are write-only — the API never returns plaintext. List
+// returns metadata (key, lastFour, timestamps); set replaces or creates;
+// delete removes by key.
+
+export interface ProjectSecretSummary {
+  key: string;
+  lastFour: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function listProjectSecrets(
+  client: ApiClient,
+  projectId: string,
+): Promise<ProjectSecretSummary[]> {
+  const data = await client.request<{ secrets: ProjectSecretSummary[] }>(
+    "GET",
+    `/api/v1/projects/${encodeURIComponent(projectId)}/secrets`,
+  );
+  return data.secrets;
+}
+
+export async function setProjectSecret(
+  client: ApiClient,
+  projectId: string,
+  key: string,
+  value: string,
+): Promise<ProjectSecretSummary> {
+  const data = await client.request<{ secret: ProjectSecretSummary }>(
+    "POST",
+    `/api/v1/projects/${encodeURIComponent(projectId)}/secrets`,
+    { key, value },
+  );
+  return data.secret;
+}
+
+export function deleteProjectSecret(
+  client: ApiClient,
+  projectId: string,
+  key: string,
+): Promise<{ success: boolean; existed: boolean }> {
+  return client.request<{ success: boolean; existed: boolean }>(
+    "DELETE",
+    `/api/v1/projects/${encodeURIComponent(projectId)}/secrets/${encodeURIComponent(key)}`,
+  );
+}
