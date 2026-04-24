@@ -20,6 +20,17 @@ updates:
         dependency-type: "production"
       development-dependencies:
         dependency-type: "development"
+    ignore:
+      # TypeScript 6 deprecated tsconfig `baseUrl`, which breaks tsup's
+      # DTS build. Revisit when the migration is planned; in the
+      # meantime stay on TS 5.x.
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
+      # @types/node jumped 20 → 25 (skipping 4 majors) alongside TS 6
+      # and is the other half of the same breaking-change bundle.
+      # Stay in the LTS-aligned major for now.
+      - dependency-name: "@types/node"
+        versions: [">=21.0.0"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
