@@ -1,9 +1,10 @@
 # floop — FloopFloop CLI
 
 [![GitHub release](https://img.shields.io/github/v/release/FloopFloopAI/floop-cli?include_prereleases&label=release&logo=github)](https://github.com/FloopFloopAI/floop-cli/releases)
+[![CI](https://img.shields.io/github/actions/workflow/status/FloopFloopAI/floop-cli/ci.yml?branch=main&logo=github&label=ci)](https://github.com/FloopFloopAI/floop-cli/actions/workflows/ci.yml)
 [![Downloads](https://img.shields.io/github/downloads/FloopFloopAI/floop-cli/total?logo=github)](https://github.com/FloopFloopAI/floop-cli/releases)
 [![License: MIT](https://img.shields.io/github/license/FloopFloopAI/floop-cli)](./LICENSE)
-![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-blue)](#install)
 
 Command-line interface for [FloopFloop](https://www.floopfloop.com). Create
 projects, watch deploys, refine in a chat REPL, manage secrets — anything you
