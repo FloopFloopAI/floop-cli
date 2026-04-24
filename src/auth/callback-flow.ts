@@ -62,43 +62,44 @@ export async function runCallbackFlow(
   const server = createServer();
   server.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
-  const port = (server.address() as AddressInfo).port;
 
-  // Tell the backend about the port + device, get the authorize URL.
-  let started: StartCallbackResponse;
+  // try/finally guarantees the local HTTP server is torn down even when
+  // waitForCallback rejects (10-minute timeout, CSRF abort, etc.) or the
+  // exchange POST fails — otherwise we'd leak a bound port per failed login.
   try {
-    started = await client.request<StartCallbackResponse>(
+    const port = (server.address() as AddressInfo).port;
+
+    // Tell the backend about the port + device, get the authorize URL.
+    const started = await client.request<StartCallbackResponse>(
       "POST",
       "/api/cli/start-callback",
       { port, deviceName, deviceOs },
     );
-  } catch (err) {
+
+    console.log(`Opening ${pc.cyan(started.authorizeUrl)} in your browser...`);
+    console.log(pc.dim("If your browser doesn't open, paste the URL above."));
+
+    // Race the browser open vs. the redirect arriving. open() can fail silently
+    // on systems without a default browser handler — that's OK, the URL was printed.
+    open(started.authorizeUrl).catch(() => {});
+
+    const callback = await waitForCallback(server, started.state);
+
+    // Swap the one-time code for a real token.
+    const exchanged = await client.request<ExchangeResponse>(
+      "POST",
+      "/api/cli/exchange",
+      { state: callback.state, code: callback.code },
+    );
+
+    return {
+      token: exchanged.token,
+      tokenPrefix: exchanged.tokenPrefix,
+      user: exchanged.user,
+    };
+  } finally {
     server.close();
-    throw err;
   }
-
-  console.log(`Opening ${pc.cyan(started.authorizeUrl)} in your browser...`);
-  console.log(pc.dim("If your browser doesn't open, paste the URL above."));
-
-  // Race the browser open vs. the redirect arriving. open() can fail silently
-  // on systems without a default browser handler — that's OK, the URL was printed.
-  open(started.authorizeUrl).catch(() => {});
-
-  const callback = await waitForCallback(server, started.state);
-  server.close();
-
-  // Swap the one-time code for a real token.
-  const exchanged = await client.request<ExchangeResponse>(
-    "POST",
-    "/api/cli/exchange",
-    { state: callback.state, code: callback.code },
-  );
-
-  return {
-    token: exchanged.token,
-    tokenPrefix: exchanged.tokenPrefix,
-    user: exchanged.user,
-  };
 }
 
 interface CallbackParams {

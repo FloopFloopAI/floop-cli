@@ -20,6 +20,7 @@ export type FloopErrorCode =
   | "SERVICE_UNAVAILABLE"
   | "SERVER_ERROR"
   | "NETWORK_ERROR"
+  | "TIMEOUT"
   | "UNKNOWN";
 
 export class FloopError extends Error {
@@ -52,6 +53,7 @@ export class FloopError extends Error {
       case "SERVICE_UNAVAILABLE":
         return 4;
       case "NETWORK_ERROR":
+      case "TIMEOUT":
         return 5;
       default:
         return 1;

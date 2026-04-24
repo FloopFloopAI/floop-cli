@@ -16,22 +16,33 @@ interface ApiError {
   error: { code: string; message: string };
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export interface ApiClientOptions {
   baseUrl: string;
   token?: string;
   /** Override fetch (for tests). Defaults to globalThis.fetch. */
   fetchImpl?: typeof fetch;
+  /** Per-request timeout in ms. Defaults to 30s. Override per call via request opts. */
+  timeoutMs?: number;
+}
+
+export interface RequestOptions {
+  /** Override the client's default per-request timeout, in ms. */
+  timeoutMs?: number;
 }
 
 export class ApiClient {
   readonly baseUrl: string;
   private readonly token?: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(opts: ApiClientOptions) {
     this.baseUrl = opts.baseUrl.replace(/\/+$/, "");
     this.token = opts.token;
     this.fetchImpl = opts.fetchImpl ?? globalThis.fetch;
+    this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }
 
   withToken(token: string): ApiClient {
@@ -39,6 +50,7 @@ export class ApiClient {
       baseUrl: this.baseUrl,
       token,
       fetchImpl: this.fetchImpl,
+      timeoutMs: this.timeoutMs,
     });
   }
 
@@ -46,6 +58,7 @@ export class ApiClient {
     method: "GET" | "POST" | "DELETE",
     path: string,
     body?: unknown,
+    opts: RequestOptions = {},
   ): Promise<T> {
     const headers: Record<string, string> = {
       "User-Agent": `floop-cli/${CURRENT_VERSION}`,
@@ -53,19 +66,31 @@ export class ApiClient {
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (this.token) headers["Authorization"] = `Bearer ${this.token}`;
 
+    const timeoutMs = opts.timeoutMs ?? this.timeoutMs;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
     let res: Response;
     try {
-      res = await this.fetchImpl(`${this.baseUrl}${path}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      });
-    } catch (err) {
-      throw new FloopError({
-        code: "NETWORK_ERROR",
-        message: `Could not reach ${this.baseUrl} (${(err as Error).message})`,
-        status: 0,
-      });
+      try {
+        res = await this.fetchImpl(`${this.baseUrl}${path}`, {
+          method,
+          headers,
+          body: body === undefined ? undefined : JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        const aborted = (err as { name?: string }).name === "AbortError";
+        throw new FloopError({
+          code: aborted ? "TIMEOUT" : "NETWORK_ERROR",
+          message: aborted
+            ? `Request to ${path} timed out after ${timeoutMs}ms`
+            : `Could not reach ${this.baseUrl} (${(err as Error).message})`,
+          status: 0,
+        });
+      }
+    } finally {
+      clearTimeout(timer);
     }
 
     const requestId = res.headers.get("x-request-id") ?? undefined;
