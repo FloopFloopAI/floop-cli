@@ -92,6 +92,10 @@ npm run compile:darwin-arm64     # or :darwin-x64, :linux-x64, :windows-x64
 Releases are produced automatically by GitHub Actions on every `cli-v*` tag —
 see [`.github/workflows/cli-release.yml`](.github/workflows/cli-release.yml).
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the per-release list of changes.
+
 ## License
 
 MIT
