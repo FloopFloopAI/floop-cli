@@ -24,9 +24,9 @@
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
-    "@types/node": "^20",
+    "@types/node": "^25",
     "tsup": "^8",
-    "typescript": "^5"
+    "typescript": "^6"
   },
   "engines": {
     "node": ">=20"
