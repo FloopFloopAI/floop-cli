@@ -1,0 +1,61 @@
+name: CI
+
+# Runs on every PR and push to main. Verifies:
+#   1. `tsc --noEmit` passes (type safety)
+#   2. `tsup` build produces dist/index.js (normal npm install path)
+#   3. `bun build --compile` produces a working Linux binary that
+#      responds to `--version` (proves the release-workflow compile
+#      path still works without cutting a release)
+#
+# The full four-target matrix + SHA256SUMS + Release creation lives
+# in cli-release.yml and only fires on `cli-v*` tags. This workflow
+# is the fast feedback loop.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} + Bun smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (tsup)
+        run: npm run build
+
+      - name: Verify dist/index.js exists
+        run: |
+          test -s dist/index.js || (echo "tsup produced no dist/index.js" && exit 1)
+          head -1 dist/index.js
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Compile linux-x64 binary (smoke)
+        run: npm run compile:linux-x64
+
+      - name: Verify compiled binary responds to --version
+        run: |
+          test -x dist/floop-linux-x64 || (echo "Bun produced no floop-linux-x64" && exit 1)
+          ./dist/floop-linux-x64 --version
