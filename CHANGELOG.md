@@ -7,6 +7,8 @@ Alpha releases use the `-alpha.N` suffix.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.7] — 2026-04-24
+
 ### Fixed
 - `ApiClient.request` now times out after 30 s (overridable per call) instead
   of hanging indefinitely. A new `TIMEOUT` `FloopErrorCode` maps to exit
