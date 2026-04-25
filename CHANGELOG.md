@@ -7,6 +7,21 @@ Alpha releases use the `-alpha.N` suffix.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.8] — 2026-04-26
+
+### Added
+- **`floop refine <project> "<message>"` command** — non-interactive
+  refinement, complementing the existing `floop chat` REPL. The chat
+  REPL is great for humans iterating on a project; this command is
+  the script-friendly equivalent for CI / batch / one-shot workflows.
+  Mirrors `client.projects.refine()` in every other FloopFloop SDK.
+  Supports `--watch` to tail the resulting build to a terminal state,
+  `--code-only` to mark as a code-only edit (no AI re-generation),
+  and `--json` for machine-readable output. Surfaces all three
+  refine response shapes from the backend (queued / processing /
+  saved-only) with appropriate prefixes.
+- Shell completion script picks up `refine` with its three options.
+
 ## [0.1.0-alpha.7] — 2026-04-24
 
 ### Fixed
