@@ -10,6 +10,7 @@ import { cancelCommand } from "./commands/cancel.js";
 import { reactivateCommand } from "./commands/reactivate.js";
 import { openCommand } from "./commands/open.js";
 import { chatCommand } from "./commands/chat.js";
+import { refineCommand } from "./commands/refine.js";
 import { upgradeCommand, CURRENT_VERSION } from "./commands/upgrade.js";
 import { docsCommand, feedbackCommand } from "./commands/help-shortcuts.js";
 import { usageCommand } from "./commands/usage.js";
@@ -161,6 +162,20 @@ program
   .description("Open an interactive REPL to refine a project (id or subdomain). With no arg, picks from your project list.")
   .action(async (ref: string | undefined) => {
     await chatCommand(ref, {});
+  });
+
+program
+  .command("refine <project> <message>")
+  .description("Send a single refinement to a project, non-interactively. Use `floop chat` for the interactive REPL.")
+  .option("--watch", "Tail the resulting build to a terminal state")
+  .option("--code-only", "Mark as code-only edit (no AI re-generation)")
+  .option("--json", "Emit machine-readable JSON")
+  .action(async (ref: string, message: string, opts) => {
+    await refineCommand(ref, message, {
+      json: !!opts.json,
+      watch: !!opts.watch,
+      codeOnly: !!opts.codeOnly,
+    });
   });
 
 program

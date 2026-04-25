@@ -36,6 +36,7 @@ const TREE: Record<string, CompletionParent> = {
   reactivate: { opts: ["--json"] },
   open: { opts: ["--json"] },
   chat: {},
+  refine: { opts: ["--watch", "--code-only", "--json"] },
   upgrade: { opts: ["--check", "--json"] },
   docs: { opts: ["--json"] },
   feedback: { opts: ["--json"] },

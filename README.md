@@ -61,6 +61,7 @@ floop login                                    # opens browser, click Approve
 floop new "a crypto RSI dashboard for BTC"     # creates project, streams progress
 floop list                                     # see your projects
 floop chat my-rsi                              # interactive refinement REPL
+floop refine my-rsi "add a dark mode"          # one-shot refine (script-friendly)
 floop status my-rsi --watch                    # live deploy progress
 floop open my-rsi                              # open the live URL
 floop upgrade                                  # self-update to the latest release
