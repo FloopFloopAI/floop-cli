@@ -99,6 +99,43 @@ export function getProjectStatus(
   );
 }
 
+/**
+ * Poll `/projects/:id/status` until the project hits a terminal state
+ * (`live` / `failed` / `cancelled` / `completed`). Calls `onEvent` on
+ * every *unique* snapshot, deduplicated on
+ * `(status, step, message, queuePosition)` — `status` is included in the
+ * tuple because `floop status --watch` renders the queue position in its
+ * progress bar, so a queue advancing from #5 → #4 must wake the renderer
+ * even when `status`/`step`/`message` are unchanged.
+ *
+ * Used by `floop status --watch`, `floop refine --watch`, and
+ * `floop reactivate --watch`. Each callsite supplies its own `onEvent`
+ * — `status` renders a progress bar, the others print one line per
+ * transition.
+ *
+ * Polling cadence is 3 s. The function returns when the loop terminates
+ * naturally; transport errors propagate to the caller.
+ */
+export async function pollProjectUntilTerminal(
+  client: ApiClient,
+  projectId: string,
+  onEvent: (event: ProjectStatusResponse) => void,
+  opts: { intervalMs?: number } = {},
+): Promise<ProjectStatusResponse> {
+  const intervalMs = opts.intervalMs ?? 3000;
+  let lastKey = "";
+  while (true) {
+    const ev = await getProjectStatus(client, projectId);
+    const key = `${ev.status}|${ev.step ?? ""}|${ev.message ?? ""}|${ev.queuePosition ?? ""}`;
+    if (key !== lastKey) {
+      lastKey = key;
+      onEvent(ev);
+    }
+    if (TERMINAL_STATUSES.has(ev.status)) return ev;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
 export function cancelProject(
   client: ApiClient,
   projectId: string,

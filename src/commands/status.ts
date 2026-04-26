@@ -1,7 +1,7 @@
 import pc from "picocolors";
 
 import { ApiClient } from "../api/client.js";
-import { getProjectStatus, TERMINAL_STATUSES } from "../api/projects.js";
+import { getProjectStatus, pollProjectUntilTerminal } from "../api/projects.js";
 import { resolveProject } from "../util/project-ref.js";
 import { handleCommandError, requireAuthedConfig } from "../util/errors.js";
 
@@ -34,26 +34,16 @@ export async function statusCommand(ref: string, opts: StatusOptions): Promise<v
 }
 
 async function watchLoop(client: ApiClient, projectId: string): Promise<void> {
-  const POLL_MS = 3000;
-  let lastLine = "";
   const isTty = process.stdout.isTTY;
-  while (true) {
-    const s = await getProjectStatus(client, projectId);
+  await pollProjectUntilTerminal(client, projectId, (s) => {
     const line = renderLine(s);
     if (isTty) {
-      if (line !== lastLine) {
-        process.stdout.write(`\r\x1b[K${line}`);
-        lastLine = line;
-      }
+      process.stdout.write(`\r\x1b[K${line}`);
     } else {
       console.log(line);
     }
-    if (TERMINAL_STATUSES.has(s.status)) {
-      if (isTty) process.stdout.write("\n");
-      return;
-    }
-    await sleep(POLL_MS);
-  }
+  });
+  if (isTty) process.stdout.write("\n");
 }
 
 function printStatus(label: string, s: { step: number; totalSteps: number; status: string; message: string; queuePosition?: number }) {
@@ -92,6 +82,3 @@ function colourStatus(status: string): string {
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
