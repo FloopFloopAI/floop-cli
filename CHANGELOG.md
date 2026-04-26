@@ -7,6 +7,17 @@ Alpha releases use the `-alpha.N` suffix.
 
 ## [Unreleased]
 
+## [0.1.0-alpha.9] — 2026-04-26
+
+### Added
+- **`floop reactivate <project> --watch`** — `reactivate` triggers a fresh
+  build, but until now the command returned immediately. With `--watch` it
+  tails the build to a terminal state using the same poll-with-dedup
+  pattern `floop status --watch` and `floop refine --watch` use. Useful
+  when you want a script to know whether the reactivated build actually
+  reached `live` (vs failed, vs queued behind something).
+- Shell completion picks up the new `--watch` option on `reactivate`.
+
 ## [0.1.0-alpha.8] — 2026-04-26
 
 ### Added

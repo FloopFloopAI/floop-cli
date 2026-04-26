@@ -33,7 +33,7 @@ const TREE: Record<string, CompletionParent> = {
   list: { opts: ["--team", "--json"], aliases: ["ls"] },
   status: { opts: ["--watch", "--json"] },
   cancel: { opts: ["--json"] },
-  reactivate: { opts: ["--json"] },
+  reactivate: { opts: ["--watch", "--json"] },
   open: { opts: ["--json"] },
   chat: {},
   refine: { opts: ["--watch", "--code-only", "--json"] },

@@ -9,4 +9,4 @@
  *
  * Bump this together with `package.json#version` on every release.
  */
-export const CURRENT_VERSION = "0.1.0-alpha.8";
+export const CURRENT_VERSION = "0.1.0-alpha.9";

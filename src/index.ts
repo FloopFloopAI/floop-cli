@@ -144,9 +144,10 @@ program
 program
   .command("reactivate <project>")
   .description("Reactivate a previously cancelled project (id or subdomain)")
+  .option("--watch", "Tail the resulting build to a terminal state")
   .option("--json", "Emit machine-readable JSON")
   .action(async (ref: string, opts) => {
-    await reactivateCommand(ref, { json: !!opts.json });
+    await reactivateCommand(ref, { json: !!opts.json, watch: !!opts.watch });
   });
 
 program
